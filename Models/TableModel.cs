@@ -10,7 +10,6 @@ namespace RepBase.Models
     {
         public string TableName { get; set; }
         public List<ColumnModel> Columns { get; set; }
-        public List<Dictionary<string, object>> Rows { get; set; }
-        
+        public List<RowModel> Rows { get; set; }
     }
 }

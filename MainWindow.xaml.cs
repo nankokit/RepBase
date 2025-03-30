@@ -42,7 +42,7 @@ namespace RepBase
         {
             try
             {
-                var tables = _databaseManager.GetTables();
+                var tables = _databaseManager.LoadTables();
 
                 var tableNames = tables.Select(t => t.TableName).ToHashSet();
                 TableItems.ToList().ForEach(t =>
@@ -69,12 +69,12 @@ namespace RepBase
                     Console.WriteLine("Columns:");
                     foreach (var column in table.Columns)
                     {
-                        Console.WriteLine($" - {column.Name}");
+                        Console.WriteLine($" - {column.ColumnName}");
                     }
                     Console.WriteLine("Rows:");
                     foreach (var row in table.Rows)
                     {
-                        Console.WriteLine(" - " + string.Join(", ", row.Select(kvp => $"{kvp.Key}: {kvp.Value}")));
+                        Console.WriteLine(" - " + string.Join(", ", row.Values.Select(data => data.Value)));
                     }
                 }
             }
@@ -87,7 +87,7 @@ namespace RepBase
         {
             try
             {
-                var dataTable = _databaseManager.LoadTableData(tableName);
+                var dataTable = _databaseManager.GetTableData(tableName);
                 DisplayTableData(dataTable);
             }
             catch (Exception ex)
@@ -168,7 +168,7 @@ namespace RepBase
         private void RefreshDataGrid()
         {
             // Получаем обновленные данные из базы данных
-            var updatedDataTable = _databaseManager.LoadTableData(_currentTableName);
+            var updatedDataTable = _databaseManager.GetTableData(_currentTableName);
             dataGrid.ItemsSource = updatedDataTable.DefaultView; // Обновляем источник данных
         }
         private int GetNextId(DataTable dataTable)

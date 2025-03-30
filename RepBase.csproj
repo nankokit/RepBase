@@ -81,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\ColumnModel.cs" />
+    <Compile Include="Models\RowModel.cs" />
     <Compile Include="Models\TableModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>

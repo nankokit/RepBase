@@ -73,13 +73,22 @@ namespace RepBase.Data
             return new DataTable();
         }
 
-        public List<TableModel> GetTables()
+        public List<TableModel> LoadTables()
         {
             var tables = new List<TableModel>();
-            string query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'";
-
+            LoadTableNames(tables);
+            LoadTableColumns(tables);
+            foreach (var tableModel in tables)
+            {
+                LoadTableData(tableModel);
+            }
+            return tables;
+        }
+        public void LoadTableNames(List<TableModel> tables)
+        {
             try
             {
+                string query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'";
                 using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     connection.Open();
@@ -89,8 +98,97 @@ namespace RepBase.Data
                         while (reader.Read())
                         {
                             var tableName = reader.GetString(0);
-                            tables.Add(new TableModel { TableName = tableName, Columns = new List<ColumnModel>(), Rows = new List<Dictionary<string, object>>() });
+                            tables.Add(new TableModel { TableName = tableName, Columns = new List<ColumnModel>(), Rows = new List<RowModel>() });
                         }
+                    }
+                    connection.Close();
+                }
+            }
+            catch (NpgsqlException ex)
+            {
+                Console.WriteLine($"Error executing query: {ex.Message}");
+            }
+        }
+
+        public void LoadTableColumns(List<TableModel> tables)
+        {
+            try
+            {
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    foreach (var tableModel in tables)
+                    {
+                        string queryColumns = $"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{tableModel.TableName}' AND table_schema = 'main'";
+                        using (var commandColumns = new NpgsqlCommand(queryColumns, connection))
+                        using (var readerColumns = commandColumns.ExecuteReader())
+                        {
+                            while (readerColumns.Read())
+                            {
+                                var columnName = readerColumns.GetString(0);
+                                var dataType = readerColumns.GetString(1);
+                                var columnType = MapDataTypeToColumnType(dataType);
+                                tableModel.Columns.Add(new ColumnModel(columnName, columnType));
+                            }
+                        }
+                    }
+
+                }
+            }
+            catch (NpgsqlException ex)
+            {
+                Console.WriteLine($"Error executing query: {ex.Message}");
+                throw;
+            }
+        }
+
+        private ColumnType MapDataTypeToColumnType(string dataType)
+        {
+            dataType = dataType.ToLower();
+            switch (dataType)
+            {
+                case "character varying":
+                    return ColumnType.CharacterVarying;
+                case "text":
+                    return ColumnType.String;
+                case "integer":
+                    return ColumnType.Integer;
+                case "real":
+                    return ColumnType.Real;
+                case "boolean":
+                    return ColumnType.Boolean;
+                case "timestamp without time zone":
+                    return ColumnType.DateTime;
+                case "json":
+                    return ColumnType.Json;
+                default:
+                    throw new ArgumentException($"Unsupported data type: {dataType}");
+            }
+
+        }
+
+        public void LoadTableData(TableModel tableModel)
+        {
+            try
+            {
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    var tableName = tableModel.TableName;
+                    string queryRows = $"SELECT * FROM main.{tableName}";
+                    using (var commandRows = new NpgsqlCommand(queryRows, connection))
+                    using (var readerRows = commandRows.ExecuteReader())
+                    {
+                        while (readerRows.Read())
+                        {
+                            var row = new RowModel();
+                            for (int i = 0; i < readerRows.FieldCount; i++)
+                            {
+                                row.Values[readerRows.GetName(i)] = readerRows.GetValue(i);
+                            }
+                            tableModel.Rows.Add(row);
+                        }
+
                     }
                 }
             }
@@ -98,15 +196,14 @@ namespace RepBase.Data
             {
                 Console.WriteLine($"Error executing query: {ex.Message}");
             }
-
-            return tables;
+            Console.WriteLine($"Loaded {tableModel.Rows.Count} rows from {tableModel.TableName}.");
         }
-        public DataTable LoadTableData(string tableName)
+
+        public DataTable GetTableData(string tableName)
         {
-            string query = $"SELECT * FROM main.{tableName};";
+            string query = $"SELECT * FROM main.{tableName}";
             return ExecuteQuery(query);
         }
-
         public void InsertIntoTable(string tableName, List<FieldModel> fieldValues)
         {
             var columns = string.Join(", ", fieldValues.Select(f => f.Key));

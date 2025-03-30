@@ -48,7 +48,7 @@ namespace RepBase
                     Value = ConvertValue(f.Key, f.Value)
                 }).ToList();
 
-                _databaseManager.InsertIntoTable(_tableName, fieldValuesToInsert);
+                //_databaseManager.InsertIntoTable(_tableName, fieldValuesToInsert);
 
                 MessageBox.Show("Данные успешно добавлены.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 DialogResult = true;

@@ -6,15 +6,26 @@ using System.Threading.Tasks;
 
 namespace RepBase.Models
 {
+    public enum ColumnType
+    {
+        String,
+        Integer,
+        Boolean,
+        DateTime,
+        Decimal,
+        Real,
+        Json,
+        CharacterVarying,
+    }
     public class ColumnModel
     {
-        public string Name { get; set; }
-        public string DataType { get; set; }
+        public string ColumnName { get; set; }
+        public ColumnType ColumnType { get; set; }
 
-        public ColumnModel(string name, string dataType)
+        public ColumnModel(string columnName, ColumnType columnType)
         {
-            Name = name;
-            DataType = dataType;
+            ColumnName = columnName;
+            ColumnType = columnType;
         }
     }
 }
