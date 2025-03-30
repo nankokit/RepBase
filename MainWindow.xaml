@@ -66,6 +66,7 @@
             <StackPanel Margin="5">
                 <TextBlock Text="Резервное сохранение" FontWeight="Bold" FontSize="16" Margin="5"/>
                 <Button Content="создать бэкап" Margin="5"/>
+                <Button Content="Export to Excel" Command="{Binding ExportToExcelCommand}" Margin="5"/>
             </StackPanel>
         </StackPanel>
 

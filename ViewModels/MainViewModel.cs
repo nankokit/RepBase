@@ -1,5 +1,4 @@
-﻿// ViewModels/MainViewModel.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -12,6 +11,8 @@ using System.Windows.Input;
 using Npgsql;
 using RepBase.Data;
 using RepBase.Models;
+using OfficeOpenXml;
+using System.IO;
 
 namespace RepBase.ViewModels
 {
@@ -57,6 +58,7 @@ namespace RepBase.ViewModels
         public ICommand DeleteRowCommand { get; }
         public ICommand UpdateCellCommand { get; }
         public ICommand SaveNewRowCommand { get; }
+        public ICommand ExportToExcelCommand { get; }
 
         public MainViewModel()
         {
@@ -68,8 +70,60 @@ namespace RepBase.ViewModels
             DeleteRowCommand = new RelayCommand(DeleteRow);
             UpdateCellCommand = new RelayCommand(UpdateCell);
             SaveNewRowCommand = new RelayCommand(SaveNewRow);
+            ExportToExcelCommand = new RelayCommand(ExportToExcel);
 
             LoadTables();
+            ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+        }
+
+        private void ExportToExcel(object parameter)
+        {
+            if (TableData == null || SelectedTable == null)
+            {
+                MessageBox.Show("No table selected or data to export.");
+                return;
+            }
+
+            try
+            {
+                var dialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    FileName = $"{SelectedTable.TableName}_export",
+                    DefaultExt = ".xlsx",
+                    Filter = "Excel Files (*.xlsx)|*.xlsx"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    using (var package = new ExcelPackage())
+                    {
+                        var worksheet = package.Workbook.Worksheets.Add(SelectedTable.TableName);
+
+                        for (int i = 0; i < TableData.Columns.Count; i++)
+                        {
+                            worksheet.Cells[1, i + 1].Value = TableData.Columns[i].ColumnName;
+                            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+                        }
+
+                        for (int row = 0; row < TableData.Rows.Count; row++)
+                        {
+                            for (int col = 0; col < TableData.Columns.Count; col++)
+                            {
+                                var value = TableData.Rows[row][col];
+                                worksheet.Cells[row + 2, col + 1].Value = value == DBNull.Value ? null : value;
+                            }
+                        }
+
+                        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+                        File.WriteAllBytes(dialog.FileName, package.GetAsByteArray());
+                        MessageBox.Show($"Data successfully exported to {dialog.FileName}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error exporting to Excel: {ex.Message}");
+            }
         }
 
         private void LoadTables()
@@ -135,7 +189,6 @@ namespace RepBase.ViewModels
                     newRow["id"] = nextId;
                 }
 
-                // Заполняем остальные поля значениями по умолчанию (NULL)
                 foreach (DataColumn column in TableData.Columns)
                 {
                     if (column.ColumnName != "id")
@@ -144,7 +197,7 @@ namespace RepBase.ViewModels
                     }
                 }
                 TableData.Rows.Add(newRow);
-                OnPropertyChanged(nameof(TableData)); // Обновляем UI
+                OnPropertyChanged(nameof(TableData));
             }
         }
 
@@ -173,7 +226,7 @@ namespace RepBase.ViewModels
                 {
                     var row = args.Row;
                     var columnName = args.ColumnName;
-                    var newValueStr = args.NewValue?.ToString();
+                    var newValueInput = args.NewValue;
                     object newValue = null;
 
                     var column = SelectedTable.Columns.FirstOrDefault(c => c.ColumnName == columnName);
@@ -183,26 +236,18 @@ namespace RepBase.ViewModels
                         return;
                     }
 
-                    // Проверка на новую строку
-                    bool isNewRow = row.ItemArray.All(field => field == DBNull.Value);
-                    if (isNewRow)
+                    if (!ValidateAndConvertValue(newValueInput, column.ColumnType, out newValue))
                     {
-                        //MessageBox.Show("Cannot update cells in a new row until all fields are filled.");
-                        return;
-                    }
-
-                    if (!ValidateAndConvertValue(newValueStr, column.ColumnType, out newValue))
-                    {
-                        MessageBox.Show($"Invalid value '{newValueStr}' for column '{columnName}' of type {column.ColumnType}");
+                        MessageBox.Show($"Invalid value '{newValueInput}' for column '{columnName}' of type {column.ColumnType}");
                         return;
                     }
 
                     var query = $"UPDATE main.{SelectedTable.TableName} SET {columnName} = @newValue WHERE ";
                     var conditions = new List<string>();
                     var parameters = new List<NpgsqlParameter>
-            {
-                new NpgsqlParameter("@newValue", newValue ?? DBNull.Value)
-            };
+                    {
+                        new NpgsqlParameter("@newValue", newValue ?? DBNull.Value)
+                    };
 
                     int paramCount = 0;
                     foreach (DataColumn col in row.Table.Columns)
@@ -242,7 +287,7 @@ namespace RepBase.ViewModels
                     var values = new List<string>();
                     var parameters = new List<NpgsqlParameter>();
                     int paramCount = 0;
-                    
+
                     if (rowView.Row.Table.Columns.Contains("id"))
                     {
                         columns.Add("id");
@@ -253,7 +298,7 @@ namespace RepBase.ViewModels
 
                     foreach (DataColumn column in rowView.Row.Table.Columns)
                     {
-                        if (column.ColumnName != "id") 
+                        if (column.ColumnName != "id")
                         {
                             var value = rowView.Row[column.ColumnName];
                             var columnDef = SelectedTable.Columns.FirstOrDefault(c => c.ColumnName == column.ColumnName);
@@ -279,7 +324,6 @@ namespace RepBase.ViewModels
                         _databaseManager.ExecuteNonQueryWithParams(query, parameters);
                     }
 
-                    // Перезагружаем данные после вставки
                     LoadTableData(SelectedTable.TableName);
                 }
                 catch (Exception ex)
@@ -288,6 +332,7 @@ namespace RepBase.ViewModels
                 }
             }
         }
+
         private string BuildWhereClause(DataRow row)
         {
             var conditions = new StringBuilder();
@@ -340,7 +385,6 @@ namespace RepBase.ViewModels
                     }
                     return false;
 
-                // Остальные случаи остаются без изменений
                 case ColumnType.String:
                 case ColumnType.CharacterVarying:
                     result = input.ToString();
