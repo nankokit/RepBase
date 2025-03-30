@@ -1,106 +1,86 @@
-﻿using RepBase.Data;
-using RepBase.Models;
-using RepBase.Services;
+﻿// ViewModels/MainViewModel.cs
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
-using RepBase.ViewModels;
-using MvvmHelpers;
-using GalaSoft.MvvmLight.Command;
+using Npgsql;
+using RepBase.Data;
+using RepBase.Models;
 
 namespace RepBase.ViewModels
 {
-    public class MainViewModel : BaseViewModel
+    public class MainViewModel : INotifyPropertyChanged
     {
         private readonly DatabaseManager _databaseManager;
-        private readonly BackupService _backupService;
-        private TableViewModel _selectedTable;
-        private QueryViewModel _selectedQuery;
+        private ObservableCollection<TableModel> _tableItems;
+        private TableModel _selectedTable;
+        private DataTable _tableData;
 
-        public ObservableCollection<TableViewModel> Tables { get; } = new ObservableCollection<TableViewModel>();
-        public ObservableCollection<QueryViewModel> Queries { get; } = new ObservableCollection<QueryViewModel>();
-        public TableViewModel SelectedTable
+        public ObservableCollection<TableModel> TableItems
+        {
+            get => _tableItems;
+            set { _tableItems = value; OnPropertyChanged(); }
+        }
+
+        public TableModel SelectedTable
         {
             get => _selectedTable;
             set
             {
-                if (_selectedTable != null) _selectedTable.IsSelected = false;
                 _selectedTable = value;
-                if (_selectedTable != null) _selectedTable.IsSelected = true;
-                OnPropertyChanged(nameof(SelectedTable));
+                OnPropertyChanged();
+                if (value != null)
+                {
+                    LoadTableData(value.TableName);
+                }
+                else
+                {
+                    TableData = null;
+                }
             }
         }
-        public QueryViewModel SelectedQuery
+
+        public DataTable TableData
         {
-            get => _selectedQuery;
-            set { _selectedQuery = value; OnPropertyChanged(nameof(SelectedQuery)); }
+            get => _tableData;
+            set { _tableData = value; OnPropertyChanged(); }
         }
 
-        public ICommand LoadTablesCommand { get; }
-        public ICommand CreateTableCommand { get; }
-        public ICommand DropTableCommand { get; }
+        public ICommand SelectTableCommand { get; }
         public ICommand AddRowCommand { get; }
-        public ICommand EditRowCommand { get; }
         public ICommand DeleteRowCommand { get; }
-        public ICommand ExecuteQueryCommand { get; }
-        public ICommand CreateBackupCommand { get; }
+        public ICommand UpdateCellCommand { get; }
+        public ICommand SaveNewRowCommand { get; }
 
         public MainViewModel()
         {
             _databaseManager = new DatabaseManager("Host=localhost;Port=5432;Database=repbase;Username=postgres;Password=postgres");
-            _backupService = new BackupService(_databaseManager);
+            TableItems = new ObservableCollection<TableModel>();
 
-            LoadTablesCommand = new RelayCommand(async () => await LoadTablesAsync());
-            CreateTableCommand = new RelayCommand(async () => await CreateTableAsync());
-            DropTableCommand = new RelayCommand(async () => await DropTableAsync(), () => SelectedTable != null);
-            AddRowCommand = new RelayCommand(async () => await AddRowAsync(), () => SelectedTable != null);
-            EditRowCommand = new RelayCommand(async () => await EditRowAsync(), () => SelectedTable != null);
-            DeleteRowCommand = new RelayCommand(async () => await DeleteRowAsync(), () => SelectedTable != null);
-            ExecuteQueryCommand = new RelayCommand(async () => await ExecuteQueryAsync(), () => SelectedQuery != null);
-            CreateBackupCommand = new RelayCommand(async () => await CreateBackupAsync(), () => SelectedTable != null);
+            SelectTableCommand = new RelayCommand(SelectTable);
+            AddRowCommand = new RelayCommand(AddRow);
+            DeleteRowCommand = new RelayCommand(DeleteRow);
+            UpdateCellCommand = new RelayCommand(UpdateCell);
+            SaveNewRowCommand = new RelayCommand(SaveNewRow);
 
-            // Загрузка при старте
-            LoadTablesAsync().GetAwaiter().GetResult();
-
-            // Добавляем 24 предустановленных запроса (пример)
-            for (int i = 1; i <= 24; i++)
-            {
-                Queries.Add(new QueryViewModel($"SELECT * FROM main.table{i}", _databaseManager));
-            }
+            LoadTables();
         }
 
-        private async Task LoadTablesAsync()
+        private void LoadTables()
         {
             try
             {
-                var tables = await _databaseManager.LoadTablesAsync();
-                var tableNames = tables.Select(t => t.TableName).ToHashSet();
-
-                foreach (var table in Tables.ToList())
-                {
-                    if (!10!tableNames.Contains(table.TableName))
-                    {
-                        Tables.Remove(table);
-                    }
-                }
-
+                var tables = _databaseManager.LoadTables();
+                TableItems.Clear();
                 foreach (var table in tables)
                 {
-                    var existingTable = Tables.FirstOrDefault(t => t.Table.TableName == table.TableName);
-                    if (existingTable != null)
-                    {
-                        existingTable.UpdateTable(table);
-                    }
-                    else
-                    {
-                        Tables.Add(new TableViewModel(table, _databaseManager));
-                    }
+                    TableItems.Add(table);
                 }
             }
             catch (Exception ex)
@@ -109,92 +89,351 @@ namespace RepBase.ViewModels
             }
         }
 
-        private async Task CreateTableAsync()
+        private void LoadTableData(string tableName)
         {
-            // Здесь можно открыть диалоговое окно для создания таблицы
-            var newTable = new TableModel
+            try
             {
-                TableName = "NewTable",
-                Columns = new List<ColumnModel> { new ColumnModel("id", ColumnType.Integer) },
-                Rows = new List<RowModel>()
-            };
-            await _databaseManager.CreateTableAsync(newTable);
-            await LoadTablesAsync();
-        }
-
-        private async Task DropTableAsync()
-        {
-            if (SelectedTable != null && MessageBox.Show($"Удалить таблицу {SelectedTable.Table.TableName}?", "Подтверждение", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-            {
-                await _databaseManager.DropTableAsync(SelectedTable.Table.TableName);
-                Tables.Remove(SelectedTable);
-                SelectedTable = null;
-            }
-        }
-
-        private async Task AddRowAsync()
-        {
-            if (SelectedTable != null)
-            {
-                var dataEntryWindow = new DataEntryWindow(_databaseManager, SelectedTable.Table.TableName, null);
-                if (dataEntryWindow.ShowDialog() == true)
+                var dataTable = _databaseManager.GetTableData(tableName);
+                CleanDataTable(dataTable);
+                foreach (DataColumn column in dataTable.Columns)
                 {
-                    await SelectedTable.RefreshDataAsync();
+                    column.ReadOnly = false;
                 }
+                TableData = dataTable;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading data for table {tableName}: {ex.Message}");
             }
         }
 
-        private async Task EditRowAsync()
+        private void CleanDataTable(DataTable dataTable)
         {
-            if (SelectedTable != null)
+            foreach (DataRow row in dataTable.Rows.Cast<DataRow>()
+                .Where(r => r.ItemArray.All(field => field == DBNull.Value)).ToList())
             {
-                // Предполагается, что у таблицы есть столбец "id"
-                var selectedRow = SelectedTable.Rows.FirstOrDefault(); // Логика выбора строки
-                if (selectedRow != null && selectedRow.Values.ContainsKey("id"))
+                dataTable.Rows.Remove(row);
+            }
+        }
+
+        private void SelectTable(object parameter)
+        {
+            if (parameter is TableModel table)
+            {
+                SelectedTable = table;
+            }
+        }
+
+        private void AddRow(object parameter)
+        {
+            if (SelectedTable != null && TableData != null)
+            {
+                var newRow = TableData.NewRow();
+                if (TableData.Columns.Contains("id"))
                 {
-                    var dataEntryWindow = new DataEntryWindow(_databaseManager, SelectedTable.Table.TableName, null, selectedRow);
-                    if (dataEntryWindow.ShowDialog() == true)
+                    int nextId = _databaseManager.GetNextId(SelectedTable.TableName);
+                    newRow["id"] = nextId;
+                }
+
+                // Заполняем остальные поля значениями по умолчанию (NULL)
+                foreach (DataColumn column in TableData.Columns)
+                {
+                    if (column.ColumnName != "id")
                     {
-                        await SelectedTable.RefreshDataAsync();
+                        newRow[column.ColumnName] = DBNull.Value;
                     }
                 }
+                TableData.Rows.Add(newRow);
+                OnPropertyChanged(nameof(TableData)); // Обновляем UI
             }
         }
 
-        private async Task DeleteRowAsync()
+        private void DeleteRow(object parameter)
         {
-            if (SelectedTable != null)
+            if (SelectedTable != null && parameter is DataRowView rowView)
             {
-                var selectedRow = SelectedTable.Rows.FirstOrDefault(); // Логика выбора строки
-                if (selectedRow != null && selectedRow.Values.ContainsKey("id"))
+                try
                 {
-                    await _databaseManager.DeleteRowAsync(SelectedTable.Table.TableName, "id", selectedRow.Values["id"]);
-                    await SelectedTable.RefreshDataAsync();
+                    var whereClause = BuildWhereClause(rowView.Row);
+                    _databaseManager.ExecuteNonQuery($"DELETE FROM main.{SelectedTable.TableName} WHERE {whereClause}");
+                    TableData.Rows.Remove(rowView.Row);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting row: {ex.Message}");
                 }
             }
         }
 
-        private async Task ExecuteQueryAsync()
+        private void UpdateCell(object parameter)
         {
-            if (SelectedQuery != null)
+            if (SelectedTable != null && parameter is CellUpdateArgs args)
             {
-                await SelectedQuery.ExecuteQueryAsync();
-                // Результат можно отобразить в отдельном окне или в DataGrid
+                try
+                {
+                    var row = args.Row;
+                    var columnName = args.ColumnName;
+                    var newValueStr = args.NewValue?.ToString();
+                    object newValue = null;
+
+                    var column = SelectedTable.Columns.FirstOrDefault(c => c.ColumnName == columnName);
+                    if (column == null)
+                    {
+                        MessageBox.Show($"Column {columnName} not found.");
+                        return;
+                    }
+
+                    // Проверка на новую строку
+                    bool isNewRow = row.ItemArray.All(field => field == DBNull.Value);
+                    if (isNewRow)
+                    {
+                        //MessageBox.Show("Cannot update cells in a new row until all fields are filled.");
+                        return;
+                    }
+
+                    if (!ValidateAndConvertValue(newValueStr, column.ColumnType, out newValue))
+                    {
+                        MessageBox.Show($"Invalid value '{newValueStr}' for column '{columnName}' of type {column.ColumnType}");
+                        return;
+                    }
+
+                    var query = $"UPDATE main.{SelectedTable.TableName} SET {columnName} = @newValue WHERE ";
+                    var conditions = new List<string>();
+                    var parameters = new List<NpgsqlParameter>
+            {
+                new NpgsqlParameter("@newValue", newValue ?? DBNull.Value)
+            };
+
+                    int paramCount = 0;
+                    foreach (DataColumn col in row.Table.Columns)
+                    {
+                        if (col.ColumnName != columnName)
+                        {
+                            var value = row[col.ColumnName];
+                            if (value != DBNull.Value)
+                            {
+                                conditions.Add($"{col.ColumnName} = @p{paramCount}");
+                                parameters.Add(new NpgsqlParameter($"@p{paramCount}", value));
+                                paramCount++;
+                            }
+                        }
+                    }
+
+                    query += conditions.Any() ? string.Join(" AND ", conditions) : "1=1";
+                    _databaseManager.ExecuteNonQueryWithParams(query, parameters);
+
+                    row[columnName] = newValue ?? DBNull.Value;
+                    OnPropertyChanged(nameof(TableData));
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error updating cell: {ex.Message}");
+                }
             }
         }
 
-        private async Task CreateBackupAsync()
+        private void SaveNewRow(object parameter)
         {
-            if (SelectedTable != null)
+            if (SelectedTable != null && parameter is DataRowView rowView)
             {
-                await _backupService.BackupTableAsync(SelectedTable.Table, $"{SelectedTable.Table.TableName}_backup.csv");
-                MessageBox.Show("Бэкап успешно создан!");
+                try
+                {
+                    var columns = new List<string>();
+                    var values = new List<string>();
+                    var parameters = new List<NpgsqlParameter>();
+                    int paramCount = 0;
+                    
+                    if (rowView.Row.Table.Columns.Contains("id"))
+                    {
+                        columns.Add("id");
+                        values.Add("@p0");
+                        parameters.Add(new NpgsqlParameter("@p0", rowView.Row["id"]));
+                        paramCount++;
+                    }
+
+                    foreach (DataColumn column in rowView.Row.Table.Columns)
+                    {
+                        if (column.ColumnName != "id") 
+                        {
+                            var value = rowView.Row[column.ColumnName];
+                            var columnDef = SelectedTable.Columns.FirstOrDefault(c => c.ColumnName == column.ColumnName);
+                            if (columnDef != null && value != DBNull.Value)
+                            {
+                                if (!ValidateAndConvertValue(value.ToString(), columnDef.ColumnType, out object validatedValue))
+                                {
+                                    MessageBox.Show($"Invalid value '{value}' for column '{column.ColumnName}' of type {columnDef.ColumnType}");
+                                    return;
+                                }
+                                paramCount++;
+                                columns.Add(column.ColumnName);
+                                values.Add($"@p{paramCount}");
+                                parameters.Add(new NpgsqlParameter($"@p{paramCount}", validatedValue));
+                            }
+                        }
+                    }
+
+                    if (columns.Any())
+                    {
+                        var query = $"INSERT INTO main.{SelectedTable.TableName} ({string.Join(", ", columns)}) " +
+                                  $"VALUES ({string.Join(", ", values)})";
+                        _databaseManager.ExecuteNonQueryWithParams(query, parameters);
+                    }
+
+                    // Перезагружаем данные после вставки
+                    LoadTableData(SelectedTable.TableName);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving new row: {ex.Message}");
+                }
+            }
+        }
+        private string BuildWhereClause(DataRow row)
+        {
+            var conditions = new StringBuilder();
+            bool firstCondition = true;
+
+            foreach (DataColumn column in row.Table.Columns)
+            {
+                var value = row[column.ColumnName];
+                if (value != DBNull.Value)
+                {
+                    if (!firstCondition)
+                    {
+                        conditions.Append(" AND ");
+                    }
+                    conditions.Append($"{column.ColumnName} = '{value}'");
+                    firstCondition = false;
+                }
+            }
+
+            return conditions.Length > 0 ? conditions.ToString() : "1=1";
+        }
+
+        private bool ValidateAndConvertValue(object input, ColumnType columnType, out object result)
+        {
+            result = null;
+
+            if (input == null || (input is string str && string.IsNullOrWhiteSpace(str)))
+            {
+                result = DBNull.Value;
+                return true;
+            }
+
+            switch (columnType)
+            {
+                case ColumnType.Boolean:
+                    if (input is bool boolValue)
+                    {
+                        result = boolValue;
+                        return true;
+                    }
+                    if (input is string strValue)
+                    {
+                        if (bool.TryParse(strValue, out bool parsedBool))
+                        {
+                            result = parsedBool;
+                            return true;
+                        }
+                        if (strValue.ToLower() == "true" || strValue == "1") { result = true; return true; }
+                        if (strValue.ToLower() == "false" || strValue == "0") { result = false; return true; }
+                    }
+                    return false;
+
+                // Остальные случаи остаются без изменений
+                case ColumnType.String:
+                case ColumnType.CharacterVarying:
+                    result = input.ToString();
+                    return true;
+
+                case ColumnType.Integer:
+                    if (int.TryParse(input.ToString(), out int intValue))
+                    {
+                        result = intValue;
+                        return true;
+                    }
+                    return false;
+
+                case ColumnType.DateTime:
+                    if (DateTime.TryParse(input.ToString(), out DateTime dateValue))
+                    {
+                        result = dateValue;
+                        return true;
+                    }
+                    return false;
+
+                case ColumnType.Decimal:
+                    if (decimal.TryParse(input.ToString(), out decimal decValue))
+                    {
+                        result = decValue;
+                        return true;
+                    }
+                    return false;
+
+                case ColumnType.Real:
+                    if (float.TryParse(input.ToString(), out float floatValue))
+                    {
+                        result = floatValue;
+                        return true;
+                    }
+                    return false;
+
+                case ColumnType.Json:
+                    try
+                    {
+                        System.Text.Json.JsonSerializer.Deserialize<object>(input.ToString());
+                        result = input.ToString();
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+
+                default:
+                    return false;
             }
         }
 
-        public void SelectTable(TableViewModel tableViewModel)
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
-            SelectedTable = tableViewModel;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public class CellUpdateArgs
+    {
+        public DataRow Row { get; set; }
+        public string ColumnName { get; set; }
+        public object NewValue { get; set; }
+    }
+
+    public class RelayCommand : ICommand
+    {
+        private readonly Action<object> _execute;
+        private readonly Func<object, bool> _canExecute;
+
+        public RelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
+        {
+            _execute = execute;
+            _canExecute = canExecute;
+        }
+
+        public event EventHandler CanExecuteChanged
+        {
+            add { CommandManager.RequerySuggested += value; }
+            remove { CommandManager.RequerySuggested -= value; }
+        }
+
+        public bool CanExecute(object parameter)
+        {
+            return _canExecute == null || _canExecute(parameter);
+        }
+
+        public void Execute(object parameter)
+        {
+            _execute(parameter);
         }
     }
 }

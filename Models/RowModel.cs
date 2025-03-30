@@ -1,17 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace RepBase.Models
 {
-    public class RowModel
+    public class RowModel : INotifyPropertyChanged
     {
-        public Dictionary<string, object> Values { get; set; }
+        private Dictionary<string, object> _values;
+
+        public Dictionary<string, object> Values
+        {
+            get => _values;
+            set { _values = value; OnPropertyChanged(); }
+        }
+
         public RowModel()
         {
             Values = new Dictionary<string, object>();
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

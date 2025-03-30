@@ -26,26 +26,37 @@
         <StackPanel Grid.Column="0" Margin="5" Background="#f0f0f0">
             <StackPanel Margin="5">
                 <TextBlock Text="Таблицы" FontWeight="Bold" FontSize="16" Margin="5"/>
-
                 <ScrollViewer Height="252" Margin="5">
                     <ItemsControl ItemsSource="{Binding TableItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding TableName}" Click="TableButton_Click" Margin="5" Background="#889C9B"/>
+                                <Button Content="{Binding TableName}"
+                                        Command="{Binding DataContext.SelectTableCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Margin="5" 
+                                        Background="#889C9B"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
 
-                <Button x:Name="btnCreateTable" Content="создать новую таблицу" Margin="5" />
-                <Button x:Name="btnDropTable" Content="удалить таблицу" Margin="5" />
+                <Button Content="создать новую таблицу" Margin="5" />
+                <Button Content="удалить таблицу" Margin="5" />
             </StackPanel>
 
             <StackPanel Margin="5">
                 <TextBlock Text="Содержание таблицы" FontWeight="Bold" FontSize="16" Margin="5" />
-                <Button x:Name="btnAddRow" Content="добавить строку" Margin="5" Click="btnAddRow_Click" />
-                <Button x:Name="btnEditRow" Content="изменить строку" Margin="5" />
-                <Button x:Name="btnDeleteRow" Content="удалить строку" Margin="5" />
+                <Button Content="добавить строку" 
+                        Command="{Binding AddRowCommand}"
+                        Margin="5" />
+                <Button Content="сохранить новую строку" 
+                        Command="{Binding SaveNewRowCommand}"
+                        CommandParameter="{Binding ElementName=dataGrid, Path=SelectedItem}"
+                        Margin="5" />
+                <Button Content="удалить строку" 
+                        Command="{Binding DeleteRowCommand}"
+                        CommandParameter="{Binding ElementName=dataGrid, Path=SelectedItem}"
+                        Margin="5" />
             </StackPanel>
             <StackPanel Margin="5">
                 <TextBlock Text="Скрипты" FontWeight="Bold" FontSize="16" Margin="5"/>
@@ -58,13 +69,21 @@
             </StackPanel>
         </StackPanel>
 
-        <DataGrid x:Name="dataGrid" Grid.Column="1" Margin="5" 
-          AutoGenerateColumns="False" 
-          HeadersVisibility="Column" 
-          RowHeaderWidth="0" 
-          HorizontalScrollBarVisibility="Auto"
-          VerticalScrollBarVisibility="Auto"
-          CanUserAddRows="False"
-          CanUserDeleteRows="True"/>
+        <DataGrid x:Name="dataGrid"
+                  Grid.Column="1" 
+                  Margin="5"
+                  ItemsSource="{Binding TableData, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                  AutoGenerateColumns="True"
+                  AutoGeneratingColumn="DataGrid_AutoGeneratingColumn"
+                  HeadersVisibility="Column" 
+                  RowHeaderWidth="0" 
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="False"
+                  CellEditEnding="DataGrid_CellEditEnding"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"/>
     </Grid>
 </Window>

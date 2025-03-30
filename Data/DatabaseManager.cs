@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using Npgsql;
 using RepBase.Models;
 
@@ -73,6 +74,47 @@ namespace RepBase.Data
             return new DataTable();
         }
 
+        public void ExecuteNonQueryWithParams(string query, List<Npgsql.NpgsqlParameter> parameters)
+        {
+            try
+            {
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    using (var command = new NpgsqlCommand(query, connection))
+                    {
+                        command.Parameters.AddRange(parameters.ToArray());
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing query: {ex.Message}");
+                throw;
+            }
+        }
+        public object ExecuteScalar(string query, List<Npgsql.NpgsqlParameter> parameters)
+        {
+            try
+            {
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    using (var command = new NpgsqlCommand(query, connection))
+                    {
+                        command.Parameters.AddRange(parameters.ToArray());
+                        return command.ExecuteScalar(); // Возвращаем одно значение
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing query: {ex.Message}");
+                throw;
+            }
+        }
+
         public List<TableModel> LoadTables()
         {
             var tables = new List<TableModel>();
@@ -119,6 +161,7 @@ namespace RepBase.Data
                     connection.Open();
                     foreach (var tableModel in tables)
                     {
+                        Console.WriteLine($"Loading {tableModel.TableName} columns:");
                         string queryColumns = $"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{tableModel.TableName}' AND table_schema = 'main'";
                         using (var commandColumns = new NpgsqlCommand(queryColumns, connection))
                         using (var readerColumns = commandColumns.ExecuteReader())
@@ -129,8 +172,11 @@ namespace RepBase.Data
                                 var dataType = readerColumns.GetString(1);
                                 var columnType = MapDataTypeToColumnType(dataType);
                                 tableModel.Columns.Add(new ColumnModel(columnName, columnType));
+                                Console.WriteLine($"Added column {columnName} with type {columnType}");
                             }
+
                         }
+                        
                     }
 
                 }
@@ -159,12 +205,14 @@ namespace RepBase.Data
                     return ColumnType.Boolean;
                 case "timestamp without time zone":
                     return ColumnType.DateTime;
+                case "numeric":
+                case "decimal":
+                    return ColumnType.Decimal;
                 case "json":
                     return ColumnType.Json;
                 default:
                     throw new ArgumentException($"Unsupported data type: {dataType}");
             }
-
         }
 
         public void LoadTableData(TableModel tableModel)
@@ -250,6 +298,15 @@ namespace RepBase.Data
         {
             string query = $"DROP TABLE IF EXISTS main.{tableName};";
             ExecuteNonQuery(query);
+        }
+        public int GetNextId(string tableName)
+        {
+            var dataTable = GetTableData(tableName);
+            if (!dataTable.Columns.Contains("id")||dataTable.Rows.Count == 0)
+            {
+                return 1;
+            }
+            return dataTable.AsEnumerable().Max(row => row.Field<int>("id")) + 1;
         }
     }
 }
