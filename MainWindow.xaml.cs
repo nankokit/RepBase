@@ -36,7 +36,6 @@ namespace RepBase
                         newValue = (e.EditingElement as TextBox)?.Text;
                     }
 
-                    // Проверяем, изменилось ли значение
                     var oldValue = row[columnName];
                     if (!Equals(newValue, oldValue))
                     {
@@ -53,7 +52,7 @@ namespace RepBase
         }
         private void DataGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
-            e.Column.Header = e.PropertyName; // e.PropertyName содержит исходное имя столбца
+            e.Column.Header = e.PropertyName; 
         }
     }
 }

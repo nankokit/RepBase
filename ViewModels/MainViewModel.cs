@@ -236,6 +236,13 @@ namespace RepBase.ViewModels
                         return;
                     }
 
+                    bool isNewRow = row.ItemArray.All(field => field == DBNull.Value);
+                    if (isNewRow)
+                    {
+                        //MessageBox.Show("Cannot update cells in a new row until all fields are filled.");
+                        return;
+                    }
+
                     if (!ValidateAndConvertValue(newValueInput, column.ColumnType, out newValue))
                     {
                         MessageBox.Show($"Invalid value '{newValueInput}' for column '{columnName}' of type {column.ColumnType}");
