@@ -59,6 +59,8 @@ namespace RepBase.ViewModels
         public ICommand UpdateCellCommand { get; }
         public ICommand SaveNewRowCommand { get; }
         public ICommand ExportToExcelCommand { get; }
+        public ICommand CreateTableCommand { get; } // Новая команда
+        public ICommand DeleteTableCommand { get; } // Новая команда
 
         public MainViewModel()
         {
@@ -71,9 +73,48 @@ namespace RepBase.ViewModels
             UpdateCellCommand = new RelayCommand(UpdateCell);
             SaveNewRowCommand = new RelayCommand(SaveNewRow);
             ExportToExcelCommand = new RelayCommand(ExportToExcel);
+            CreateTableCommand = new RelayCommand(CreateTable); // Инициализация
+            DeleteTableCommand = new RelayCommand(DeleteTable); // Инициализация
 
             LoadTables();
             ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+        }
+
+        private void CreateTable(object parameter)
+        {
+            var createTableWindow = new CreateTableWindow(_databaseManager);
+            createTableWindow.Owner = Application.Current.MainWindow;
+            createTableWindow.ShowDialog();
+
+            // После закрытия окна обновляем список таблиц
+            LoadTables();
+        }
+
+        private void DeleteTable(object parameter)
+        {
+            if (SelectedTable == null)
+            {
+                MessageBox.Show("Please select a table to delete.");
+                return;
+            }
+
+            var result = MessageBox.Show($"Are you sure you want to delete the table '{SelectedTable.TableName}'? This action cannot be undone.",
+                "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    _databaseManager.DropTable(SelectedTable.TableName);
+                    MessageBox.Show($"Table '{SelectedTable.TableName}' deleted successfully.");
+                    SelectedTable = null; // Очищаем выбранную таблицу
+                    LoadTables(); // Обновляем список таблиц
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting table: {ex.Message}");
+                }
+            }
         }
 
         private void ExportToExcel(object parameter)

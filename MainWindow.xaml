@@ -26,7 +26,7 @@
         <StackPanel Grid.Column="0" Margin="5" Background="#f0f0f0">
             <StackPanel Margin="5">
                 <TextBlock Text="Таблицы" FontWeight="Bold" FontSize="16" Margin="5"/>
-                <ScrollViewer Height="252" Margin="5">
+                <ScrollViewer Height="200" Margin="5">
                     <ItemsControl ItemsSource="{Binding TableItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -40,10 +40,14 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                <Button Content="создать новую таблицу" Margin="5" />
-                <Button Content="удалить таблицу" Margin="5" />
+                <Button Content="создать новую таблицу" 
+                        Command="{Binding CreateTableCommand}" 
+                        Margin="5" />
+                <Button Content="удалить таблицу" 
+                        Command="{Binding DeleteTableCommand}" 
+                        Margin="5" />
             </StackPanel>
-
+    
             <StackPanel Margin="5">
                 <TextBlock Text="Содержание таблицы" FontWeight="Bold" FontSize="16" Margin="5" />
                 <Button Content="добавить строку" 

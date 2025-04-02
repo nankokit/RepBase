@@ -58,9 +58,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="CreateTableWindow.xaml.cs" />
+    <Compile Include="ViewModels\CreateTableViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
-    <Page Include="DataEntryWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
+    <Page Include="CreateTableWindow.xaml">
+      <Generator>XamlIntelliSenseFileGenerator</Generator>
       <SubType>Designer</SubType>
     </Page>
     <Page Include="MainWindow.xaml">
@@ -70,9 +72,6 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DataEntryWindow.xaml.cs">
-      <DependentUpon>DataEntryWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Data\DatabaseManager.cs" />
     <Compile Include="MainWindow.xaml.cs">

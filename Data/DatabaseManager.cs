@@ -252,42 +252,6 @@ namespace RepBase.Data
             string query = $"SELECT * FROM main.{tableName}";
             return ExecuteQuery(query);
         }
-        public void InsertIntoTable(string tableName, List<FieldModel> fieldValues)
-        {
-            var columns = string.Join(", ", fieldValues.Select(f => f.Key));
-            var parameters = string.Join(", ", fieldValues.Select(f => $"@{f.Key}"));
-            string query = $"INSERT INTO main.{tableName} ({columns}) VALUES ({parameters});";
-
-            using (var connection = new NpgsqlConnection(_connectionString))
-            {
-                using (var command = new NpgsqlCommand(query, connection))
-                {
-                    // Добавляем параметры для запроса
-                    foreach (var field in fieldValues)
-                    {
-                        command.Parameters.AddWithValue($"@{field.Key}", field.Value ?? (object)DBNull.Value);
-                    }
-
-                    try
-                    {
-                        connection.Open();
-                        command.ExecuteNonQuery(); // Выполняем запрос
-                        Console.WriteLine("Данные успешно добавлены.");
-                    }
-                    catch (NpgsqlException ex)
-                    {
-                        Console.WriteLine($"Ошибка при добавлении данных: {ex.Message}");
-                        throw; // Перебрасываем исключение для обработки в вызывающем коде
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Ошибка при выполнении запроса: {ex.Message}");
-                        throw; // Перебрасываем исключение для обработки в вызывающем коде
-                    }
-                }
-            }
-        }
-
         public void CreateTable(string tableName, string tableDefinition)
         {
             string query = $"CREATE TABLE IF NOT EXISTS main.{tableName} ({tableDefinition});";
