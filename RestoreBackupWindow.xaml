@@ -1,12 +1,14 @@
 <Window x:Class="RepBase.RestoreBackupWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:RepBase"
         Title="Восстановление бэкапа" 
         Height="300" 
         Width="400"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Window.Resources>
+        <local:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
         <Style TargetType="Button">
             <Setter Property="Background" Value="#486966"/>
             <Setter Property="Foreground" Value="White"/>
@@ -64,13 +66,19 @@
 
         <StackPanel Grid.Row="2" 
                     Orientation="Horizontal" 
-                    HorizontalAlignment="Right">
-            <Button Content="Восстановить" 
-                    Width="125" 
+                    HorizontalAlignment="Center">
+            <Button Content="Удалить" 
+                    Width="115" 
                     Margin="0,0,10,0" 
-                    Command="{Binding RestoreBackupCommand}"/>
+                    Command="{Binding DeleteBackupCommand}"
+                    IsEnabled="{Binding SelectedBackup, Converter={StaticResource NullToBooleanConverter}}"/>
+            <Button Content="Восстановить" 
+                    Width="115" 
+                    Margin="0,0,10,0" 
+                    Command="{Binding RestoreBackupCommand}"
+                    IsEnabled="{Binding SelectedBackup, Converter={StaticResource NullToBooleanConverter}}"/>
             <Button Content="Отмена" 
-                    Width="125" 
+                    Width="115" 
                     Click="Cancel_Click"/>
         </StackPanel>
     </Grid>

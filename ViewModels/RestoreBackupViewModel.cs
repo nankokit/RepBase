@@ -4,7 +4,6 @@ using RepBase.ViewModels;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -31,6 +30,7 @@ namespace RepBase
         }
 
         public ICommand RestoreBackupCommand { get; }
+        public ICommand DeleteBackupCommand { get; }
 
         public RestoreBackupViewModel(DatabaseManager databaseManager)
         {
@@ -38,12 +38,8 @@ namespace RepBase
             _backupService = new BackupService(_databaseManager);
             Backups = new ObservableCollection<BackupInfo>(_backupService.GetBackups());
 
-            RestoreBackupCommand = new RelayCommand(RestoreBackup, CanRestoreBackup);
-        }
-
-        private bool CanRestoreBackup(object parameter)
-        {
-            return SelectedBackup != null;
+            RestoreBackupCommand = new RelayCommand(RestoreBackup);
+            DeleteBackupCommand = new RelayCommand(DeleteBackup);
         }
 
         private void RestoreBackup(object parameter)
@@ -71,6 +67,35 @@ namespace RepBase
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Ошибка при восстановлении бэкапа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void DeleteBackup(object parameter)
+        {
+            if (SelectedBackup == null)
+            {
+                MessageBox.Show("Пожалуйста, выберите бэкап для удаления.");
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Вы уверены, что хотите удалить бэкап '{SelectedBackup.Name}'? Это действие нельзя отменить.",
+                "Подтверждение удаления",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    _backupService.DeleteBackup(SelectedBackup.FilePath);
+                    Backups.Remove(SelectedBackup);
+                    SelectedBackup = null;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при удалении бэкапа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }

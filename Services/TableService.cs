@@ -9,13 +9,14 @@ using Npgsql;
 using RepBase.ViewModels;
 using System.Collections.Generic;
 using System.Text;
+using System.Globalization; // Добавляем для CultureInfo
 
 namespace RepBase.Services
 {
     public class TableService
     {
         private readonly DatabaseManager _databaseManager;
-        private readonly BackupService _backupService; // Добавляем поле для BackupService
+        private readonly BackupService _backupService;
 
         public TableService(DatabaseManager databaseManager, BackupService backupService)
         {
@@ -213,8 +214,9 @@ namespace RepBase.Services
 
             try
             {
-                //var rowBackupScript = GenerateRowBackupScript(selectedTable, rowView.Row);
-                //_backupService.SaveBackupScript(rowBackupScript, $"row_{selectedTable.TableName}_{DateTime.Now:yyyyMMddHHmmss}");
+                // Создаем бэкап строки перед удалением
+                var rowBackupScript = GenerateRowBackupScript(selectedTable, rowView.Row);
+                _backupService.SaveBackupScript(rowBackupScript, $"row_{selectedTable.TableName}_{DateTime.Now:yyyyMMddHHmmss}");
 
                 var whereClause = BuildWhereClause(rowView.Row);
                 _databaseManager.ExecuteNonQuery($"DELETE FROM main.{selectedTable.TableName} WHERE {whereClause}");
@@ -240,9 +242,10 @@ namespace RepBase.Services
             {
                 try
                 {
-                    //var tableData = _databaseManager.GetTableData(selectedTable.TableName);
-                    //var tableBackupScript = GenerateTableBackupScript(selectedTable, tableData);
-                    //_backupService.SaveBackupScript(tableBackupScript, $"table_{selectedTable.TableName}");
+                    // Создаем бэкап таблицы перед удалением
+                    var tableData = _databaseManager.GetTableData(selectedTable.TableName);
+                    var tableBackupScript = GenerateTableBackupScript(selectedTable, tableData);
+                    _backupService.SaveBackupScript(tableBackupScript, $"table_{selectedTable.TableName}");
 
                     _databaseManager.DropTable(selectedTable.TableName);
                     tableItems.Remove(selectedTable);
@@ -452,6 +455,12 @@ namespace RepBase.Services
                     return (bool)value ? "TRUE" : "FALSE";
                 case ColumnType.DateTime:
                     return $"'{(DateTime)value:yyyy-MM-dd HH:mm:ss}'";
+                case ColumnType.Decimal:
+                case ColumnType.Real:
+                    // Используем InvariantCulture для записи чисел с точкой
+                    return Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture);
+                case ColumnType.Integer:
+                    return value.ToString();
                 default:
                     return value.ToString();
             }
