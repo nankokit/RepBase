@@ -35,6 +35,23 @@ namespace RepBase
 
                 if (viewModel != null && row != null && column != null)
                 {
+                    // Проверяем, является ли строка "новой"
+                    bool isNewRow = true;
+                    foreach (DataColumn col in row.Row.Table.Columns)
+                    {
+                        if (col.ColumnName != "id" && row.Row[col.ColumnName] != DBNull.Value)
+                        {
+                            isNewRow = false;
+                            break;
+                        }
+                    }
+
+                    if (isNewRow)
+                    {
+                        // Если строка новая, не вызываем UpdateCell
+                        return;
+                    }
+
                     var columnName = column.Header.ToString();
                     object newValue = null;
 
@@ -85,8 +102,7 @@ namespace RepBase
             var viewModel = DataContext as MainViewModel;
             if (viewModel != null)
             {
-                var currentScriptContent = viewModel.GetScriptContent(viewModel.SelectedScriptName);
-                if (scriptTextBox.Text != currentScriptContent && viewModel.SelectedScriptName != "новый скрипт")
+                if (scriptTextBox.Text != viewModel.CurrentScript && viewModel.SelectedScriptName != "новый скрипт")
                 {
                     viewModel.SelectedScriptName = "новый скрипт";
                 }

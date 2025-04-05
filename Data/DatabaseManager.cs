@@ -19,6 +19,11 @@ namespace RepBase.Data
             _connectionString = connectionString;
         }
 
+        public NpgsqlConnection GetConnection()
+        {
+            return new NpgsqlConnection(_connectionString);
+        }
+
         public void ExecuteNonQuery(string query)
         {
             try

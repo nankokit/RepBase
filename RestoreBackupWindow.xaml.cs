@@ -1,5 +1,4 @@
-﻿using RepBase.ViewModels;
-using System.Windows;
+﻿using System.Windows;
 
 namespace RepBase
 {

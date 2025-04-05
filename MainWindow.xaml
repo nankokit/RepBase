@@ -26,7 +26,7 @@
         <StackPanel Grid.Column="0" Margin="5" Background="#f0f0f0">
             <StackPanel Margin="5">
                 <TextBlock Text="Таблицы" FontWeight="Bold" FontSize="16" Margin="5"/>
-                <ScrollViewer Height="170" Margin="5">
+                <ScrollViewer Height="150" Margin="5">
                     <ItemsControl ItemsSource="{Binding TableItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -66,17 +66,19 @@
                 <TextBlock Text="Скрипты" FontWeight="Bold" FontSize="16" Margin="5"/>
                 <ComboBox x:Name="scriptsComboBox" 
                           Margin="5" 
+                          FontSize="12"
                           ItemsSource="{Binding ScriptNames, Mode=OneWay}"
                           SelectedItem="{Binding SelectedScriptName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           SelectionChanged="ScriptsComboBox_SelectionChanged"/>
                 <TextBox x:Name="scriptTextBox" 
                          Margin="5" 
-                         Height="50" 
+                         Height="65" 
                          AcceptsReturn="True" 
                          AcceptsTab="True"
                          TextWrapping="Wrap"
                          IsReadOnly="False"
                          Text="{Binding CurrentScript, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontSize="12"
                          TextChanged="ScriptTextBox_TextChanged"/>
                 <Button Content="выполнить" 
                         Command="{Binding ExecuteScriptCommand}"
