@@ -68,6 +68,9 @@
     <Compile Include="RestoreBackupWindow.xaml.cs">
       <DependentUpon>RestoreBackupWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ScriptNameDialog.xaml.cs">
+      <DependentUpon>ScriptNameDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Services\BackupService.cs" />
     <Compile Include="Services\ExportService.cs" />
     <Compile Include="Services\ScriptService.cs" />
@@ -99,6 +102,9 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="RestoreBackupWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ScriptNameDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

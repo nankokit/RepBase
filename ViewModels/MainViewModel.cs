@@ -262,31 +262,9 @@ namespace RepBase.ViewModels
 
         private string PromptForScriptName()
         {
-            var dialog = new Window
-            {
-                Title = "Введите имя скрипта",
-                Width = 300,
-                Height = 150,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = Application.Current.MainWindow
-            };
-
-            var stackPanel = new StackPanel { Margin = new Thickness(10) };
-            var textBox = new TextBox { Margin = new Thickness(0, 0, 0, 10) };
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            var okButton = new Button { Content = "OK", Width = 75, Margin = new Thickness(0, 0, 10, 0) };
-            var cancelButton = new Button { Content = "Отмена", Width = 75 };
-
-            okButton.Click += (s, e) => { dialog.DialogResult = true; dialog.Close(); };
-            cancelButton.Click += (s, e) => { dialog.DialogResult = false; dialog.Close(); };
-            buttonPanel.Children.Add(okButton);
-            buttonPanel.Children.Add(cancelButton);
-            stackPanel.Children.Add(new TextBlock { Text = "Введите имя скрипта:" });
-            stackPanel.Children.Add(textBox);
-            stackPanel.Children.Add(buttonPanel);
-            dialog.Content = stackPanel;
-
-            return dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(textBox.Text) ? textBox.Text : null;
+            var dialog = new ScriptNameDialog();
+            bool? result = dialog.ShowDialog();
+            return result == true && !string.IsNullOrWhiteSpace(dialog.ScriptName) ? dialog.ScriptName : null;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
