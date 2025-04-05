@@ -58,12 +58,28 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="CreateTableWindow.xaml.cs" />
+    <Compile Include="CreateTableWindow.xaml.cs">
+      <DependentUpon>CreateTableWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ExportOptionsWindow.xaml.cs">
+      <DependentUpon>ExportOptionsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="RestoreBackupWindow.xaml.cs">
+      <DependentUpon>RestoreBackupWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Services\BackupService.cs" />
+    <Compile Include="Services\ExportService.cs" />
+    <Compile Include="Services\ScriptService.cs" />
+    <Compile Include="Services\TableService.cs" />
     <Compile Include="ViewModels\CreateTableViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
+    <Compile Include="ViewModels\RestoreBackupViewModel.cs" />
     <Page Include="CreateTableWindow.xaml">
       <Generator>XamlIntelliSenseFileGenerator</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ExportOptionsWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -79,6 +95,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Resources\Styles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="RestoreBackupWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

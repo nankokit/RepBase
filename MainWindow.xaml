@@ -26,7 +26,7 @@
         <StackPanel Grid.Column="0" Margin="5" Background="#f0f0f0">
             <StackPanel Margin="5">
                 <TextBlock Text="Таблицы" FontWeight="Bold" FontSize="16" Margin="5"/>
-                <ScrollViewer Height="200" Margin="5">
+                <ScrollViewer Height="170" Margin="5">
                     <ItemsControl ItemsSource="{Binding TableItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -64,13 +64,32 @@
             </StackPanel>
             <StackPanel Margin="5">
                 <TextBlock Text="Скрипты" FontWeight="Bold" FontSize="16" Margin="5"/>
-                <ComboBox x:Name="scriptsComboBox" Margin="5"/>
-                <Button Content="выполнить" Margin="5"/>
+                <ComboBox x:Name="scriptsComboBox" 
+                          Margin="5" 
+                          ItemsSource="{Binding ScriptNames, Mode=OneWay}"
+                          SelectedItem="{Binding SelectedScriptName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          SelectionChanged="ScriptsComboBox_SelectionChanged"/>
+                <TextBox x:Name="scriptTextBox" 
+                         Margin="5" 
+                         Height="50" 
+                         AcceptsReturn="True" 
+                         AcceptsTab="True"
+                         TextWrapping="Wrap"
+                         IsReadOnly="False"
+                         Text="{Binding CurrentScript, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         TextChanged="ScriptTextBox_TextChanged"/>
+                <Button Content="выполнить" 
+                        Command="{Binding ExecuteScriptCommand}"
+                        Margin="5"/>
+                <Button Content="сохранить новый скрипт" 
+                        Command="{Binding SaveScriptCommand}"
+                        Margin="5"/>
             </StackPanel>
             <StackPanel Margin="5">
                 <TextBlock Text="Резервное сохранение" FontWeight="Bold" FontSize="16" Margin="5"/>
-                <Button Content="создать бэкап" Margin="5"/>
-                <Button Content="Export to Excel" Command="{Binding ExportToExcelCommand}" Margin="5"/>
+                <Button Content="создать бэкап" Command="{Binding CreateBackupCommand}" Margin="5"/>
+                <Button Content="восстановить бэкап" Command="{Binding ShowRestoreBackupCommand}" Margin="5"/>
+                <Button Content="экспорт в Excel" Command="{Binding ShowExportOptionsCommand}" Margin="5"/>
             </StackPanel>
         </StackPanel>
 

@@ -260,8 +260,25 @@ namespace RepBase.Data
 
         public void DropTable(string tableName)
         {
-            string query = $"DROP TABLE IF EXISTS main.{tableName};";
-            ExecuteNonQuery(query);
+            try
+            {
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    string query = $"DROP TABLE IF EXISTS main.{tableName} CASCADE;";
+                    Console.WriteLine($"Executing query: {query}"); // Для отладки
+                    using (var command = new NpgsqlCommand(query, connection))
+                    {
+                        int rowsAffected = command.ExecuteNonQuery();
+                        Console.WriteLine($"DropTable: {rowsAffected} rows affected"); // Для отладки
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in DropTable: {ex.Message}"); // Для отладки
+                throw; // Перебрасываем исключение, чтобы увидеть его в MainViewModel
+            }
         }
         public int GetNextId(string tableName)
         {
